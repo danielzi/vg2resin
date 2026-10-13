@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>vg2resin 控制台</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌐</text></svg>">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card-bg: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --text-muted: #8b949e;
+      --primary: #58a6ff;
+      --primary-hover: #1f6feb;
+      --success: #2ea043;
+      --danger: #f85149;
+      --warning: #d29922;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      padding: 24px;
+      line-height: 1.5;
+    }
+    .container { max-width: 1240px; margin: 0 auto; }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    h1 { font-size: 22px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+    .badge {
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--primary);
+    }
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .stat-title { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
+    .stat-val { font-size: 22px; font-weight: 600; color: #fff; }
+    .stat-sub { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: #21262d;
+      border-radius: 3px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    .actions-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .sub-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #090d13;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-family: monospace;
+      font-size: 13px;
+      color: var(--primary);
+    }
+    button {
+      background: var(--card-bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    button:hover { background: #21262d; border-color: #8b949e; }
+    button.btn-primary { background: var(--primary-hover); color: #fff; border-color: var(--primary); }
+    button.btn-primary:hover { background: var(--primary); }
+    button.btn-danger { color: var(--danger); }
+    button.btn-danger:hover { background: rgba(248,81,73,0.1); border-color: var(--danger); }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+    th {
+      background: #11141a;
+      color: var(--text-muted);
+      padding: 12px 16px;
+      font-weight: 500;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #1c2128; }
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+    .dot-online { background: var(--success); box-shadow: 0 0 8px var(--success); }
+    .dot-offline { background: var(--danger); }
+    .flag { font-weight: 600; padding: 2px 6px; border-radius: 4px; background: #21262d; }
+    .ip-code { font-family: monospace; font-size: 13px; }
+    .logs-card { margin-top: 24px; }
+    .logs-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .logs-content {
+      background: #090d13;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #8b949e;
+      height: 240px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #238636;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 13px;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🌐 vg2resin 可视化控制台 <span class="badge">Port 28080</span></h1>
+      <div style="display:flex; gap:8px;">
+        <button onclick="triggerRefresh()" class="btn-primary" id="btnRefresh">⚡ 立即扫描补齐槽位</button>
+      </div>
+    </header>
+
+    <div class="stats-bar">
+      <div class="card">
+        <div class="stat-title"><span>活跃出口节点 / 槽位上限</span></div>
+        <div class="stat-val"><span id="activeCount" style="color:var(--success)">0</span> / <span id="poolSize">-</span></div>
+        <div class="stat-sub">独立公网 IP 数: <strong id="ipCount" style="color:#fff">0</strong></div>
+      </div>
+
+      <div class="card">
+        <div class="stat-title"><span>本应用内存消耗 (RSS)</span><span id="appProcCount">0 进程</span></div>
+        <div class="stat-val" style="color:#58a6ff"><span id="appMemMb">0.0</span> MB</div>
+        <div class="stat-sub">含 Python 主控 + OpenVPN + Microsocks</div>
+      </div>
+
+      <div class="card">
+        <div class="stat-title"><span>本应用 CPU 消耗</span><span>系统总 CPU: <span id="sysCpuPct">0.0</span>%</span></div>
+        <div class="stat-val" style="color:#3fb950"><span id="appCpuPct">0.0</span>%</div>
+        <div class="progress-bar"><div class="progress-fill" id="cpuBar" style="width:0%; background:#3fb950;"></div></div>
+        <div class="stat-sub">系统负载 (1m/5m): <span id="loadAvg">-</span></div>
+      </div>
+
+      <div class="card">
+        <div class="stat-title"><span>宿主机系统内存</span><span id="sysMemPct">0%</span></div>
+        <div class="stat-val"><span id="sysMemUsed">0</span> / <span id="sysMemTotal">0</span> MB</div>
+        <div class="progress-bar"><div class="progress-fill" id="memBar" style="width:0%;"></div></div>
+        <div class="stat-sub">订阅默认 Host: <span id="publicHost" style="color:#fff">-</span></div>
+      </div>
+    </div>
+
+    <div class="actions-bar">
+      <div class="sub-box">
+        <span>Resin 远程订阅 URL:</span>
+        <span id="subUrl" style="color:#fff; font-weight:600;">-</span>
+        <button onclick="copySubUrl()" style="padding:2px 8px; margin-left:6px;">📋 复制链接</button>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button onclick="window.open('/sub', '_blank')">📄 查看明文订阅</button>
+        <button onclick="fetchStatus()">🔄 立即刷新</button>
+      </div>
+    </div>
+
+    <div class="card" style="padding:0; overflow:hidden;">
+      <table>
+        <thead>
+          <tr>
+            <th>槽位</th>
+            <th>状态</th>
+            <th>SOCKS5 端口</th>
+            <th>国家</th>
+            <th>VPNGate 节点 IP</th>
+            <th>实测出口公网 IP</th>
+            <th>实例内存</th>
+            <th>在线时长</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="workerTable">
+          <tr><td colspan="9" style="text-align:center; padding:24px; color:var(--text-muted)">正在加载节点信息...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card logs-card">
+      <div class="logs-header">
+        <span style="font-weight:600; font-size:14px;">📜 实时运行与采集日志</span>
+        <button onclick="fetchLogs()" style="padding:2px 8px;">刷新日志</button>
+      </div>
+      <div class="logs-content" id="logContent">正在获取日志...</div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 2600);
+    }
+
+    function copySubUrl() {
+      const url = document.getElementById('subUrl').innerText;
+      navigator.clipboard.writeText(url).then(() => {
+        showToast('已复制订阅地址: ' + url);
+      });
+    }
+
+    function formatDuration(sec) {
+      if (!sec || sec < 0) return '-';
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      if (m < 60) return `${m}分${s}秒`;
+      const h = Math.floor(m / 60);
+      return `${h}时${m % 60}分`;
+    }
+
+    async function fetchStatus() {
+      try {
+        const res = await fetch('/status');
+        const data = await res.json();
+
+        document.getElementById('poolSize').innerText = data.pool_size;
+        document.getElementById('publicHost').innerText = data.public_host;
+        const sub = `${window.location.protocol}//${window.location.host}/sub`;
+        document.getElementById('subUrl').innerText = sub;
+
+        if (data.resources) {
+          const r = data.resources;
+          document.getElementById('appMemMb').innerText = r.app_rss_mb.toFixed(1);
+          document.getElementById('appProcCount').innerText = `${r.app_proc_count} 进程`;
+          document.getElementById('appCpuPct').innerText = r.app_cpu_percent.toFixed(1);
+          document.getElementById('sysCpuPct').innerText = r.sys_cpu_percent.toFixed(1);
+          document.getElementById('loadAvg').innerText = `${r.load_1m} / ${r.load_5m}`;
+          document.getElementById('cpuBar').style.width = `${Math.min(100, r.app_cpu_percent)}%`;
+
+          document.getElementById('sysMemUsed').innerText = r.sys_mem_used_mb;
+          document.getElementById('sysMemTotal').innerText = r.sys_mem_total_mb;
+          document.getElementById('sysMemPct').innerText = `${r.sys_mem_percent}%`;
+          document.getElementById('memBar').style.width = `${Math.min(100, r.sys_mem_percent)}%`;
+        }
+
+        const workers = data.workers || [];
+        const active = workers.filter(w => w.alive);
+        document.getElementById('activeCount').innerText = active.length;
+        const uniqueIps = new Set(active.map(w => w.egress_ip).filter(Boolean));
+        document.getElementById('ipCount').innerText = uniqueIps.size;
+
+        const tbody = document.getElementById('workerTable');
+        if (workers.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:var(--text-muted)">当前暂无活跃隧道，后台正在并发连接 VPNGate 节点...</td></tr>';
+          return;
+        }
+
+        let html = '';
+        workers.forEach(w => {
+          const isAlive = w.alive;
+          html += `
+            <tr>
+              <td><strong>#${w.slot}</strong></td>
+              <td>
+                <span class="status-dot ${isAlive ? 'dot-online' : 'dot-offline'}"></span>
+                ${isAlive ? '<span style="color:var(--success)">在线</span>' : '<span style="color:var(--danger)">异常</span>'}
+              </td>
+              <td><span class="ip-code">:${w.port}</span></td>
+              <td><span class="flag">${w.country || 'VG'}</span></td>
+              <td><span class="ip-code">${w.vpn_server_ip || '-'}</span></td>
+              <td><span class="ip-code" style="color:${isAlive ? '#58a6ff' : 'var(--text-muted)'}">${w.egress_ip || '-'}</span></td>
+              <td><span class="ip-code">${(w.rss_mb || 0).toFixed(1)} MB</span></td>
+              <td>${formatDuration(w.uptime_sec)}</td>
+              <td>
+                <button class="btn-danger" onclick="rotateSlot(${w.slot})">🔄 换线</button>
+              </td>
+            </tr>
+          `;
+        });
+        tbody.innerHTML = html;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function rotateSlot(slot) {
+      try {
+        showToast(`正在重置槽位 #${slot} 并切换新节点...`);
+        const res = await fetch(`/api/rotate?slot=${slot}`, { method: 'POST' });
+        const d = await res.json();
+        showToast(d.message || '已触发换线');
+        fetchStatus();
+        fetchLogs();
+      } catch (e) {
+        showToast('换线请求失败: ' + e);
+      }
+    }
+
+    async function triggerRefresh() {
+      const btn = document.getElementById('btnRefresh');
+      btn.disabled = true;
+      btn.innerText = '⏳ 正在后台扫描补齐...';
+      try {
+        const res = await fetch('/api/rescan', { method: 'POST' });
+        const d = await res.json();
+        showToast(d.message || '已触发全量扫描');
+        fetchStatus();
+        fetchLogs();
+      } catch (e) {
+        showToast('触发失败');
+      } finally {
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.innerText = '⚡ 立即扫描补齐槽位';
+        }, 3000);
+      }
+    }
+
+    async function fetchLogs() {
+      try {
+        const res = await fetch('/api/logs');
+        const text = await res.text();
+        const box = document.getElementById('logContent');
+        box.innerText = text;
+        box.scrollTop = box.scrollHeight;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    fetchStatus();
+    fetchLogs();
+    setInterval(fetchStatus, 3000);
+    setInterval(fetchLogs, 5000);
+  </script>
+</body>
+</html>

@@ -20,6 +20,7 @@ RUN apk add --no-cache \
 COPY --from=builder /tmp/microsocks/microsocks /usr/bin/microsocks
 
 WORKDIR /app
+COPY templates /app/templates
 COPY up_hook.sh /app/up_hook.sh
 COPY app.py /app/app.py
 COPY entrypoint.sh /app/entrypoint.sh
