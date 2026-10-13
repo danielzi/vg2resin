@@ -40,11 +40,26 @@ mem_handler = BufferedLogHandler()
 mem_handler.setFormatter(formatter)
 root_logger.addHandler(mem_handler)
 
-POOL_SIZE = int(os.environ.get("POOL_SIZE", 8))
+RUNTIME_DIR = os.environ.get("RUNTIME_DIR", "/var/run/vg2resin")
+CONFIG_FILE = os.path.join(RUNTIME_DIR, "config.json")
+os.makedirs(RUNTIME_DIR, exist_ok=True)
+
+def load_initial_pool_size():
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE) as f:
+                d = json.load(f)
+                val = int(d.get("pool_size", 0))
+                if 1 <= val <= 60:
+                    return val
+        except Exception:
+            pass
+    return int(os.environ.get("POOL_SIZE", 8))
+
+POOL_SIZE = load_initial_pool_size()
 BASE_PORT = int(os.environ.get("BASE_PORT", 10800))
 HTTP_PORT = int(os.environ.get("HTTP_PORT", 28080))
 REFRESH_INTERVAL = int(os.environ.get("REFRESH_INTERVAL", 120))
-RUNTIME_DIR = os.environ.get("RUNTIME_DIR", "/var/run/vg2resin")
 UP_HOOK = os.environ.get("UP_HOOK", "/app/up_hook.sh")
 if not os.path.exists(UP_HOOK) and os.path.exists("/root/workspace/vg2resin/up_hook.sh"):
     UP_HOOK = "/root/workspace/vg2resin/up_hook.sh"
@@ -52,14 +67,12 @@ if not os.path.exists(UP_HOOK) and os.path.exists("/root/workspace/vg2resin/up_h
 TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
 OPENVPN_BIN = shutil.which("openvpn") or "/usr/sbin/openvpn"
 
-os.makedirs(RUNTIME_DIR, exist_ok=True)
-
 lock = threading.Lock()
 workers = {}
 failed_ips = {}
 scan_event = threading.Event()
+ip_info_cache = {}  # ip -> {"type": str, "isp": str}
 
-# 资源消耗监控数据缓存
 metrics_cache = {
     "app_rss_mb": 0.0,
     "app_proc_count": 0,
@@ -71,6 +84,13 @@ metrics_cache = {
     "load_1m": 0.0,
     "load_5m": 0.0
 }
+
+def save_pool_size(size):
+    try:
+        with open(CONFIG_FILE, "w") as f:
+            json.dump({"pool_size": size}, f)
+    except Exception as e:
+        logging.warning(f"Failed to save config.json: {e}")
 
 def get_public_ip():
     env_ip = os.environ.get("SERVER_IP", "").strip()
@@ -95,6 +115,29 @@ def get_public_ip():
 
 PUBLIC_HOST = get_public_ip()
 logging.info(f"Default public host for Resin subscription: {PUBLIC_HOST}")
+
+def lookup_ip_info_async(ip):
+    if not ip or ip in ip_info_cache:
+        return
+    def _do():
+        url = f"http://ip-api.com/json/{ip}?fields=status,isp,mobile,hosting"
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "curl/7.88.1"})
+            with urllib.request.urlopen(req, timeout=4) as r:
+                d = json.loads(r.read().decode())
+            if d.get("status") == "success":
+                if d.get("hosting"):
+                    t = "机房/数据中心"
+                elif d.get("mobile"):
+                    t = "移动网络"
+                else:
+                    t = "家庭宽带/商宽"
+                ip_info_cache[ip] = {"type": t, "isp": d.get("isp", "")}
+                return
+        except Exception:
+            pass
+        ip_info_cache[ip] = {"type": "未知", "isp": ""}
+    threading.Thread(target=_do, daemon=True).start()
 
 def parse_iphone_csv(text):
     if "*vpn_servers" not in text:
@@ -167,7 +210,7 @@ def fetch_from_html():
         )
         matches = [m for m in pattern.findall(html) if int(m[3]) > 0]
         nodes = []
-        for country, fqdn, ip, tcp, udp, sid, hid in matches[:POOL_SIZE * 4]:
+        for country, fqdn, ip, tcp, udp, sid, hid in matches[:max(30, POOL_SIZE * 3)]:
             if ip in failed_ips and time.time() - failed_ips[ip] < 600:
                 continue
             proto_flag = f"tcp=1&port={tcp}"
@@ -185,7 +228,7 @@ def fetch_from_html():
                         "speed": 10000000,
                         "ovpn": ovpn_text
                     })
-                    if len(nodes) >= POOL_SIZE * 2:
+                    if len(nodes) >= max(20, POOL_SIZE * 2):
                         break
             except Exception:
                 continue
@@ -315,6 +358,7 @@ def start_worker(idx, node):
     if ready:
         egress_ip = probe_socks5_egress(port, timeout=6)
         if egress_ip:
+            lookup_ip_info_async(egress_ip)
             logging.info(f"[Worker-{idx}] ONLINE -> SOCKS5 :{port} | Node: {node['country']}-{node['ip']} | Egress: {egress_ip}")
             with lock:
                 workers[idx] = {
@@ -333,7 +377,6 @@ def start_worker(idx, node):
     clean_worker(idx)
     return False
 
-# 后台资源消耗计算线程
 def resource_monitor_loop():
     last_sys_total = 0
     last_sys_idle = 0
@@ -342,7 +385,6 @@ def resource_monitor_loop():
 
     while True:
         try:
-            # 1. 宿主机内存
             mem = {}
             with open("/proc/meminfo") as f:
                 for line in f:
@@ -354,7 +396,6 @@ def resource_monitor_loop():
             used_mem = total_mem - avail_mem
             mem_pct = round((used_mem / total_mem) * 100, 1) if total_mem else 0
 
-            # 2. 系统 CPU
             with open("/proc/stat") as f:
                 fields = [float(x) for x in f.readline().split()[1:8]]
                 sys_total = sum(fields)
@@ -366,7 +407,6 @@ def resource_monitor_loop():
             if last_sys_total > 0 and diff_sys_total > 0:
                 sys_cpu = max(0.0, min(100.0, (1.0 - diff_sys_idle / diff_sys_total) * 100.0))
 
-            # 3. 收集属于本服务及子进程的 PIDs
             my_pid = os.getpid()
             tracked_pids = {my_pid}
             with lock:
@@ -376,7 +416,6 @@ def resource_monitor_loop():
                     if w.get("ms_pid"):
                         tracked_pids.add(w["ms_pid"])
 
-            # 累加应用进程的 CPU ticks 和 RSS 内存
             total_rss_kb = 0
             app_ticks = 0
             valid_pids = 0
@@ -395,7 +434,6 @@ def resource_monitor_loop():
             now = time.time()
             elapsed = now - last_time
             if last_app_ticks > 0 and diff_sys_total > 0:
-                # 换算为百分比
                 diff_ticks = max(0, app_ticks - last_app_ticks)
                 hz = os.sysconf(os.sysconf_names['SC_CLK_TCK']) if hasattr(os, 'sysconf') else 100
                 cpu_cores = os.cpu_count() or 1
@@ -424,9 +462,17 @@ def resource_monitor_loop():
         time.sleep(2.0)
 
 def supervisor_loop():
+    global POOL_SIZE
     logging.info("Starting background supervisor...")
     while True:
         try:
+            # 清理超出当前目标插槽数的旧槽位
+            with lock:
+                extra_slots = [idx for idx in workers.keys() if idx > POOL_SIZE]
+            for extra in extra_slots:
+                logging.info(f"Removing extra slot #{extra} due to POOL_SIZE change")
+                clean_worker(extra)
+
             dead_slots = []
             for i in range(1, POOL_SIZE + 1):
                 with lock:
@@ -438,7 +484,7 @@ def supervisor_loop():
                         dead_slots.append(i)
 
             if dead_slots:
-                logging.info(f"Filling slots: {dead_slots}...")
+                logging.info(f"Filling slots: {dead_slots} (Target: {POOL_SIZE})...")
                 candidates = get_candidate_nodes()
                 with lock:
                     active_ips = {w["node"]["ip"] for w in workers.values()}
@@ -494,10 +540,25 @@ class ResinSubHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_POST(self):
+        global POOL_SIZE
         parsed = urllib.parse.urlparse(self.path)
         qs = urllib.parse.parse_qs(parsed.query)
 
-        if parsed.path == "/api/rotate":
+        if parsed.path == "/api/config":
+            try:
+                new_size = int(qs.get("pool_size", [0])[0])
+                if 1 <= new_size <= 60:
+                    old_size = POOL_SIZE
+                    POOL_SIZE = new_size
+                    save_pool_size(new_size)
+                    logging.info(f"Target pool size updated from {old_size} to {new_size}")
+                    scan_event.set()
+                    self.send_json({"ok": True, "pool_size": POOL_SIZE, "message": f"插槽数量已调整为 {POOL_SIZE}"})
+                    return
+            except Exception as e:
+                pass
+            self.send_json({"ok": False, "message": "无效的插槽数量 (需介于 1~60)"}, 400)
+        elif parsed.path == "/api/rotate":
             slot = int(qs.get("slot", [0])[0])
             if 1 <= slot <= POOL_SIZE:
                 logging.info(f"Manual rotation requested for slot #{slot}")
@@ -556,12 +617,16 @@ class ResinSubHandler(BaseHTTPRequestHandler):
             with lock:
                 for idx, w in sorted(workers.items()):
                     w_rss = (get_proc_rss_kb(w["proc"].pid) + get_proc_rss_kb(w.get("ms_pid") or 0)) / 1024
+                    egress = w.get("egress_ip")
+                    ip_info = ip_info_cache.get(egress, {}) if egress else {}
                     workers_data.append({
                         "slot": idx,
                         "port": w["port"],
                         "country": w["node"]["country"],
                         "vpn_server_ip": w["node"]["ip"],
-                        "egress_ip": w.get("egress_ip"),
+                        "egress_ip": egress,
+                        "ip_type": ip_info.get("type", "查询中..."),
+                        "isp": ip_info.get("isp", ""),
                         "uptime_sec": int(time.time() - w["ready_time"]),
                         "rss_mb": round(w_rss, 1),
                         "alive": check_socks5_handshake(w["port"])

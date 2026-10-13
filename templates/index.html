@@ -17,6 +17,7 @@
       --success: #2ea043;
       --danger: #f85149;
       --warning: #d29922;
+      --purple: #bc8cff;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -26,7 +27,7 @@
       padding: 24px;
       line-height: 1.5;
     }
-    .container { max-width: 1240px; margin: 0 auto; }
+    .container { max-width: 1280px; margin: 0 auto; }
     header {
       display: flex;
       justify-content: space-between;
@@ -34,6 +35,8 @@
       margin-bottom: 24px;
       padding-bottom: 16px;
       border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 16px;
     }
     h1 { font-size: 22px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
     .badge {
@@ -44,9 +47,34 @@
       border: 1px solid var(--border);
       color: var(--primary);
     }
+    .pool-control-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #090d13;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+    }
+    .pool-control-box label { font-size: 13px; color: var(--text-muted); }
+    .pool-control-box input {
+      width: 54px;
+      background: #161b22;
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 4px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      text-align: center;
+    }
+    .preset-btn {
+      padding: 3px 7px;
+      font-size: 11px;
+      border-radius: 4px;
+    }
     .stats-bar {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
       gap: 16px;
       margin-bottom: 24px;
     }
@@ -115,12 +143,12 @@
     th {
       background: #11141a;
       color: var(--text-muted);
-      padding: 12px 16px;
+      padding: 12px 14px;
       font-weight: 500;
       border-bottom: 1px solid var(--border);
     }
     td {
-      padding: 12px 16px;
+      padding: 12px 14px;
       border-bottom: 1px solid var(--border);
       vertical-align: middle;
     }
@@ -135,8 +163,19 @@
     }
     .dot-online { background: var(--success); box-shadow: 0 0 8px var(--success); }
     .dot-offline { background: var(--danger); }
-    .flag { font-weight: 600; padding: 2px 6px; border-radius: 4px; background: #21262d; }
+    .flag { font-weight: 600; padding: 2px 6px; border-radius: 4px; background: #21262d; font-size: 12px; }
     .ip-code { font-family: monospace; font-size: 13px; }
+    .type-badge {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .type-residential { background: rgba(46,160,67,0.15); color: #3fb950; border: 1px solid rgba(46,160,67,0.3); }
+    .type-mobile { background: rgba(188,140,255,0.15); color: #d2a8ff; border: 1px solid rgba(188,140,255,0.3); }
+    .type-hosting { background: rgba(139,148,158,0.15); color: #8b949e; border: 1px solid rgba(139,148,158,0.3); }
+    .isp-text { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
     .logs-card { margin-top: 24px; }
     .logs-header {
       display: flex;
@@ -152,7 +191,7 @@
       font-family: monospace;
       font-size: 12px;
       color: #8b949e;
-      height: 240px;
+      height: 220px;
       overflow-y: auto;
       white-space: pre-wrap;
       word-break: break-all;
@@ -175,23 +214,32 @@
 <body>
   <div class="container">
     <header>
-      <h1>🌐 vg2resin 可视化控制台 <span class="badge">Port 28080</span></h1>
-      <div style="display:flex; gap:8px;">
-        <button onclick="triggerRefresh()" class="btn-primary" id="btnRefresh">⚡ 立即扫描补齐槽位</button>
+      <h1>🌐 vg2resin 控制面板 <span class="badge">Port 28080</span></h1>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <div class="pool-control-box">
+          <label>目标插槽数:</label>
+          <input type="number" id="inputPoolSize" min="1" max="60" value="8">
+          <button onclick="setPoolSize(document.getElementById('inputPoolSize').value)" class="btn-primary" style="padding:3px 10px;">应用</button>
+          <button class="preset-btn" onclick="setPoolSize(5)">5</button>
+          <button class="preset-btn" onclick="setPoolSize(10)">10</button>
+          <button class="preset-btn" onclick="setPoolSize(20)">20</button>
+          <button class="preset-btn" onclick="setPoolSize(30)">30</button>
+        </div>
+        <button onclick="triggerRefresh()" class="btn-primary" id="btnRefresh">⚡ 扫描补齐</button>
       </div>
     </header>
 
     <div class="stats-bar">
       <div class="card">
-        <div class="stat-title"><span>活跃出口节点 / 槽位上限</span></div>
+        <div class="stat-title"><span>活跃出口节点 / 目标槽位</span><span id="residentialSummary" style="color:#3fb950">0 家宽</span></div>
         <div class="stat-val"><span id="activeCount" style="color:var(--success)">0</span> / <span id="poolSize">-</span></div>
-        <div class="stat-sub">独立公网 IP 数: <strong id="ipCount" style="color:#fff">0</strong></div>
+        <div class="stat-sub">独立公网 IP: <strong id="ipCount" style="color:#fff">0</strong></div>
       </div>
 
       <div class="card">
         <div class="stat-title"><span>本应用内存消耗 (RSS)</span><span id="appProcCount">0 进程</span></div>
         <div class="stat-val" style="color:#58a6ff"><span id="appMemMb">0.0</span> MB</div>
-        <div class="stat-sub">含 Python 主控 + OpenVPN + Microsocks</div>
+        <div class="stat-sub">Python 主控 + OpenVPN + Microsocks</div>
       </div>
 
       <div class="card">
@@ -229,15 +277,16 @@
             <th>状态</th>
             <th>SOCKS5 端口</th>
             <th>国家</th>
-            <th>VPNGate 节点 IP</th>
+            <th>出口 IP 类型</th>
             <th>实测出口公网 IP</th>
+            <th>VPN 节点 IP</th>
             <th>实例内存</th>
             <th>在线时长</th>
             <th>操作</th>
           </tr>
         </thead>
         <tbody id="workerTable">
-          <tr><td colspan="9" style="text-align:center; padding:24px; color:var(--text-muted)">正在加载节点信息...</td></tr>
+          <tr><td colspan="10" style="text-align:center; padding:24px; color:var(--text-muted)">正在加载节点信息...</td></tr>
         </tbody>
       </table>
     </div>
@@ -277,12 +326,32 @@
       return `${h}时${m % 60}分`;
     }
 
+    async function setPoolSize(val) {
+      val = parseInt(val, 10);
+      if (isNaN(val) || val < 1 || val > 60) {
+        showToast('请输入 1~60 之间的插槽数');
+        return;
+      }
+      try {
+        const res = await fetch(`/api/config?pool_size=${val}`, { method: 'POST' });
+        const d = await res.json();
+        showToast(d.message || '已更新插槽数量');
+        document.getElementById('inputPoolSize').value = val;
+        fetchStatus();
+      } catch (e) {
+        showToast('更新失败: ' + e);
+      }
+    }
+
     async function fetchStatus() {
       try {
         const res = await fetch('/status');
         const data = await res.json();
 
         document.getElementById('poolSize').innerText = data.pool_size;
+        if (!document.getElementById('inputPoolSize').matches(':focus')) {
+          document.getElementById('inputPoolSize').value = data.pool_size;
+        }
         document.getElementById('publicHost').innerText = data.public_host;
         const sub = `${window.location.protocol}//${window.location.host}/sub`;
         document.getElementById('subUrl').innerText = sub;
@@ -308,15 +377,23 @@
         const uniqueIps = new Set(active.map(w => w.egress_ip).filter(Boolean));
         document.getElementById('ipCount').innerText = uniqueIps.size;
 
+        const resCount = active.filter(w => w.ip_type && w.ip_type.includes('家宽')).length;
+        document.getElementById('residentialSummary').innerText = `${resCount} 家宽 / ${active.length - resCount} 机房`;
+
         const tbody = document.getElementById('workerTable');
         if (workers.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:var(--text-muted)">当前暂无活跃隧道，后台正在并发连接 VPNGate 节点...</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:24px; color:var(--text-muted)">当前暂无活跃隧道，后台正在并发连接 VPNGate 节点...</td></tr>';
           return;
         }
 
         let html = '';
         workers.forEach(w => {
           const isAlive = w.alive;
+          let typeClass = 'type-hosting';
+          let typeLabel = w.ip_type || '未知';
+          if (typeLabel.includes('家宽')) typeClass = 'type-residential';
+          else if (typeLabel.includes('移动')) typeClass = 'type-mobile';
+
           html += `
             <tr>
               <td><strong>#${w.slot}</strong></td>
@@ -326,8 +403,12 @@
               </td>
               <td><span class="ip-code">:${w.port}</span></td>
               <td><span class="flag">${w.country || 'VG'}</span></td>
-              <td><span class="ip-code">${w.vpn_server_ip || '-'}</span></td>
+              <td>
+                <span class="type-badge ${typeClass}">${typeLabel}</span>
+                ${w.isp ? `<div class="isp-text" title="${w.isp}">${w.isp.substring(0, 24)}</div>` : ''}
+              </td>
               <td><span class="ip-code" style="color:${isAlive ? '#58a6ff' : 'var(--text-muted)'}">${w.egress_ip || '-'}</span></td>
+              <td><span class="ip-code">${w.vpn_server_ip || '-'}</span></td>
               <td><span class="ip-code">${(w.rss_mb || 0).toFixed(1)} MB</span></td>
               <td>${formatDuration(w.uptime_sec)}</td>
               <td>
@@ -370,7 +451,7 @@
       } finally {
         setTimeout(() => {
           btn.disabled = false;
-          btn.innerText = '⚡ 立即扫描补齐槽位';
+          btn.innerText = '⚡ 扫描补齐';
         }, 3000);
       }
     }
