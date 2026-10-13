@@ -417,8 +417,8 @@
           let latHtml = '<span style="color:var(--text-muted)">-</span>';
           if (w.latency_ms !== null && w.latency_ms !== undefined) {
             let latClass = 'lat-fast';
-            if (w.latency_ms > 800) latClass = 'lat-slow';
-            else if (w.latency_ms > 400) latClass = 'lat-medium';
+            if (w.latency_ms > 300) latClass = 'lat-slow';
+            else if (w.latency_ms >= 150) latClass = 'lat-medium';
             latHtml = `<span class="latency-badge ${latClass}">${w.latency_ms} ms</span>`;
           }
 
