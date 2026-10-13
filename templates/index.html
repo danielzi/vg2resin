@@ -906,8 +906,16 @@
         document.getElementById('ipCount').innerText = uniqueIps.size;
 
         const resCount = active.filter(w => w.ip_type && (w.ip_type.includes('宽带') || w.ip_type.includes('家宽'))).length;
+        const mobCount = active.filter(w => w.ip_type && w.ip_type.includes('移动')).length;
         const dcCount = active.filter(w => w.ip_type && (w.ip_type.includes('机房') || w.ip_type.includes('数据中心'))).length;
-        document.getElementById('residentialSummary').innerText = `${resCount} 家宽/商宽 · ${dcCount} 机房`;
+        const otherCount = active.length - resCount - mobCount - dcCount;
+
+        const parts = [];
+        if (resCount > 0 || (mobCount === 0 && dcCount === 0)) parts.push(`${resCount} 家宽/商宽`);
+        if (mobCount > 0) parts.push(`${mobCount} 移动网络`);
+        if (dcCount > 0) parts.push(`${dcCount} 机房`);
+        if (otherCount > 0) parts.push(`${otherCount} 查询中`);
+        document.getElementById('residentialSummary').innerText = parts.join(' · ');
 
         const latencies = active.map(w => w.latency_ms).filter(v => typeof v === 'number');
         if (latencies.length > 0) {
