@@ -1,0 +1,19 @@
+services:
+  vg2resin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vg2resin
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - POOL_SIZE=10
+      - BASE_PORT=10800
+      - HTTP_PORT=8080
+      - REFRESH_INTERVAL=120
+    volumes:
+      - ./runtime:/var/run/vg2resin
