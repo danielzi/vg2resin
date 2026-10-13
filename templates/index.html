@@ -3,329 +3,813 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>vg2resin 控制台</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌐</text></svg>">
+  <title>vg2resin Gateway</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0d1117;
-      --card-bg: #161b22;
-      --border: #30363d;
-      --text: #c9d1d9;
-      --text-muted: #8b949e;
-      --primary: #58a6ff;
-      --primary-hover: #1f6feb;
-      --success: #2ea043;
-      --danger: #f85149;
-      --warning: #d29922;
-      --purple: #bc8cff;
+      --bg: #090c10;
+      --surface-1: #0f141c;
+      --surface-2: #161d27;
+      --surface-3: #1d2533;
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --border-strong: rgba(255, 255, 255, 0.14);
+      --inner-glint: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      --text-main: #f0f4f8;
+      --text-muted: #828e9e;
+      --text-subtle: #4e5968;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-glow: rgba(59, 130, 246, 0.18);
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.2);
+      --warning: #f59e0b;
+      --warning-glow: rgba(245, 158, 11, 0.2);
+      --danger: #ef4444;
+      --danger-glow: rgba(239, 68, 68, 0.2);
+      --purple: #8b5cf6;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    
     body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-      padding: 24px;
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59, 130, 246, 0.08), transparent 70%),
+        radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.03), transparent 40%);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      font-size: 14px;
       line-height: 1.5;
+      min-height: 100dvh;
+      padding: 32px 24px 64px;
+      -webkit-font-smoothing: antialiased;
     }
-    .container { max-width: 1320px; margin: 0 auto; }
+
+    .container {
+      max-width: 1360px;
+      margin: 0 auto;
+    }
+
+    /* Header & Navigation Bar */
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--border);
+      margin-bottom: 28px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-subtle);
       flex-wrap: wrap;
-      gap: 16px;
+      gap: 20px;
     }
-    h1 { font-size: 22px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
-    .badge {
-      font-size: 12px;
-      padding: 2px 8px;
-      border-radius: 12px;
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      color: var(--primary);
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
     }
-    .pool-control-box {
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--inner-glint), 0 4px 12px rgba(0, 0, 0, 0.3);
+      color: var(--accent);
+    }
+
+    .brand-text h1 {
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff;
       display: flex;
       align-items: center;
       gap: 8px;
-      background: #090d13;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 4px 10px;
     }
-    .pool-control-box label { font-size: 13px; color: var(--text-muted); }
-    .pool-control-box input {
-      width: 54px;
-      background: #161b22;
-      border: 1px solid var(--border);
+
+    .brand-text .subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .chip {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      color: #93c5fd;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Control Box */
+    .pool-stepper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface-1);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 4px 10px;
+      box-shadow: var(--inner-glint);
+    }
+
+    .stepper-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .stepper-input {
+      width: 48px;
+      background: var(--surface-2);
+      border: 1px solid var(--border-strong);
       color: #fff;
       padding: 4px 6px;
-      border-radius: 4px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
       font-size: 13px;
       text-align: center;
+      outline: none;
+      transition: border-color 0.2s;
     }
-    .preset-btn {
-      padding: 3px 7px;
+    .stepper-input:focus { border-color: var(--accent); }
+
+    .preset-pill {
+      font-family: var(--font-mono);
       font-size: 11px;
-      border-radius: 4px;
-    }
-    .stats-bar {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-    .card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px;
-    }
-    .stat-title { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
-    .stat-val { font-size: 22px; font-weight: 600; color: #fff; }
-    .stat-sub { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
-    .progress-bar {
-      width: 100%;
-      height: 6px;
-      background: #21262d;
-      border-radius: 3px;
-      margin-top: 8px;
-      overflow: hidden;
-    }
-    .progress-fill {
-      height: 100%;
-      background: var(--primary);
-      border-radius: 3px;
-      transition: width 0.3s ease;
-    }
-    .actions-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    .sub-box {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: #090d13;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 6px 12px;
-      font-family: monospace;
-      font-size: 13px;
-      color: var(--primary);
-    }
-    button {
-      background: var(--card-bg);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 6px 12px;
-      font-size: 13px;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      background: var(--surface-2);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
       cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .preset-pill:hover {
+      color: #fff;
+      border-color: var(--border-strong);
+      background: var(--surface-3);
+    }
+
+    /* Buttons */
+    .btn {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: all 0.2s;
-    }
-    button:hover { background: #21262d; border-color: #8b949e; }
-    button.btn-primary { background: var(--primary-hover); color: #fff; border-color: var(--primary); }
-    button.btn-primary:hover { background: var(--primary); }
-    button.btn-danger { color: var(--danger); }
-    button.btn-danger:hover { background: rgba(248,81,73,0.1); border-color: var(--danger); }
-    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
-    th {
-      background: #11141a;
-      color: var(--text-muted);
-      padding: 12px 14px;
+      font-family: var(--font-sans);
+      font-size: 13px;
       font-weight: 500;
-      border-bottom: 1px solid var(--border);
+      padding: 6px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-1);
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: var(--inner-glint);
+      text-decoration: none;
     }
-    td {
-      padding: 12px 14px;
-      border-bottom: 1px solid var(--border);
-      vertical-align: middle;
+    .btn:hover {
+      background: var(--surface-2);
+      border-color: var(--border-strong);
+      color: #fff;
+      transform: translateY(-1px);
     }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #1c2128; }
-    .status-dot {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      margin-right: 6px;
+    .btn:active {
+      transform: translateY(0);
+      background: var(--surface-3);
     }
-    .dot-online { background: var(--success); box-shadow: 0 0 8px var(--success); }
-    .dot-offline { background: var(--danger); }
-    .flag { font-weight: 600; padding: 2px 6px; border-radius: 4px; background: #21262d; font-size: 12px; }
-    .ip-code { font-family: monospace; font-size: 13px; }
-    .type-badge {
-      display: inline-block;
-      font-size: 11px;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-weight: 500;
+
+    .btn-primary {
+      background: linear-gradient(180deg, #3b82f6, #2563eb);
+      border-color: #60a5fa;
+      color: #fff;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.25);
     }
-    .type-residential { background: rgba(46,160,67,0.15); color: #3fb950; border: 1px solid rgba(46,160,67,0.3); }
-    .type-mobile { background: rgba(188,140,255,0.15); color: #d2a8ff; border: 1px solid rgba(188,140,255,0.3); }
-    .type-hosting { background: rgba(139,148,158,0.15); color: #8b949e; border: 1px solid rgba(139,148,158,0.3); }
-    .isp-text { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-    .latency-badge {
-      display: inline-block;
-      font-family: monospace;
+    .btn-primary:hover {
+      background: linear-gradient(180deg, #4f91ff, #306feb);
+      border-color: #93c5fd;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    }
+
+    .btn-danger-ghost {
+      padding: 4px 10px;
       font-size: 12px;
-      font-weight: 600;
-      padding: 2px 6px;
-      border-radius: 4px;
+      color: var(--text-muted);
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
     }
-    .lat-fast { color: #3fb950; background: rgba(46,160,67,0.12); }
-    .lat-medium { color: #d29922; background: rgba(210,153,34,0.12); }
-    .lat-slow { color: #f85149; background: rgba(248,81,73,0.12); }
-    .logs-card { margin-top: 24px; }
-    .logs-header {
+    .btn-danger-ghost:hover {
+      color: var(--danger);
+      background: rgba(239, 68, 68, 0.08);
+      border-color: rgba(239, 68, 68, 0.25);
+    }
+
+    /* Bento Grid Metrics */
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 1024px) {
+      .bento-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .bento-grid { grid-template-columns: 1fr; }
+    }
+
+    .bento-card {
+      background: var(--surface-1);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      box-shadow: var(--inner-glint), 0 8px 24px -10px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+    .bento-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    }
+
+    .card-top {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 12px;
     }
-    .logs-content {
-      background: #090d13;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 12px;
-      font-family: monospace;
+    .card-label {
       font-size: 12px;
-      color: #8b949e;
+      font-weight: 500;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .card-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--surface-2);
+      color: var(--text-muted);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .card-num {
+      font-family: var(--font-mono);
+      font-size: 26px;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      color: #fff;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+    .card-num .unit {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--text-muted);
+    }
+
+    .card-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      padding-top: 8px;
+    }
+
+    .meter-track {
+      width: 100%;
+      height: 4px;
+      background: var(--surface-2);
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+    .meter-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.4s ease;
+    }
+
+    /* Subscription Ribbon */
+    .sub-ribbon {
+      background: var(--surface-1);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 12px 18px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      box-shadow: var(--inner-glint);
+    }
+
+    .sub-endpoint {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-grow: 1;
+      min-width: 280px;
+    }
+
+    .sub-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .sub-address-bar {
+      flex-grow: 1;
+      background: #06090e;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: #93c5fd;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+
+    /* Data Table */
+    .table-container {
+      background: var(--surface-1);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--inner-glint), 0 12px 32px -16px rgba(0, 0, 0, 0.6);
+      margin-bottom: 24px;
+    }
+
+    .table-header-bar {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .table-title {
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-variant-numeric: tabular-nums;
+    }
+
+    thead th {
+      background: #0c1017;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      transition: background-color 0.15s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background-color: var(--surface-2); }
+
+    tbody td {
+      padding: 14px 16px;
+      vertical-align: middle;
+      font-size: 13px;
+    }
+
+    .slot-id {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .status-pulse {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+    .pulse-online {
+      background: var(--success);
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      animation: pulse-ring 2s infinite;
+    }
+    .pulse-offline {
+      background: var(--danger);
+    }
+
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+      70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .port-badge {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #93c5fd;
+      background: rgba(59, 130, 246, 0.08);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .flag-badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--surface-3);
+      border: 1px solid var(--border-strong);
+      color: #fff;
+    }
+
+    .ip-type-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid transparent;
+    }
+    .type-res { background: rgba(16, 185, 129, 0.1); color: #34d399; border-color: rgba(16, 185, 129, 0.25); }
+    .type-mob { background: rgba(139, 92, 246, 0.1); color: #c084fc; border-color: rgba(139, 92, 246, 0.25); }
+    .type-dc  { background: rgba(130, 142, 158, 0.1); color: #94a3b8; border-color: rgba(130, 142, 158, 0.2); }
+
+    .isp-caption {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .mono-cell {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+    }
+
+    .latency-pill {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid transparent;
+    }
+    .lat-fast   { background: rgba(16, 185, 129, 0.1); color: #34d399; border-color: rgba(16, 185, 129, 0.25); }
+    .lat-medium { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border-color: rgba(245, 158, 11, 0.25); }
+    .lat-slow   { background: rgba(239, 68, 68, 0.1); color: #f87171; border-color: rgba(239, 68, 68, 0.25); }
+
+    /* Terminal Console */
+    .terminal-card {
+      background: var(--surface-1);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--inner-glint);
+    }
+    .terminal-bar {
+      padding: 12px 18px;
+      background: #0c1017;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .terminal-dots {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .t-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--surface-3);
+    }
+    .terminal-body {
+      background: #05070a;
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #94a3b8;
       height: 220px;
       overflow-y: auto;
       white-space: pre-wrap;
       word-break: break-all;
+      line-height: 1.6;
     }
+
+    /* Toast Notification */
     .toast {
       position: fixed;
       bottom: 24px;
       right: 24px;
-      background: #238636;
+      background: var(--surface-2);
+      border: 1px solid var(--border-strong);
       color: #fff;
-      padding: 10px 18px;
-      border-radius: 6px;
+      padding: 10px 16px;
+      border-radius: var(--radius-md);
       font-size: 13px;
-      display: none;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      font-weight: 500;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), var(--inner-glint);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transform: translateY(60px);
+      opacity: 0;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
       z-index: 1000;
+    }
+    .toast.active {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Utility icons */
+    .icon {
+      width: 14px;
+      height: 14px;
+      display: inline-block;
+      vertical-align: middle;
+      stroke-width: 2;
+      stroke: currentColor;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
   </style>
 </head>
 <body>
   <div class="container">
+    <!-- Header -->
     <header>
-      <h1>🌐 vg2resin 控制面板 <span class="badge">Port 28080</span></h1>
-      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-        <div class="pool-control-box">
-          <label>目标插槽数:</label>
-          <input type="number" id="inputPoolSize" min="1" max="60" value="8">
-          <button onclick="setPoolSize(document.getElementById('inputPoolSize').value)" class="btn-primary" style="padding:3px 10px;">应用</button>
-          <button class="preset-btn" onclick="setPoolSize(5)">5</button>
-          <button class="preset-btn" onclick="setPoolSize(10)">10</button>
-          <button class="preset-btn" onclick="setPoolSize(20)">20</button>
-          <button class="preset-btn" onclick="setPoolSize(30)">30</button>
+      <div class="brand-group">
+        <div class="brand-icon">
+          <svg class="icon" style="width:20px; height:20px;" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
         </div>
-        <button onclick="triggerRefresh()" class="btn-primary" id="btnRefresh">⚡ 扫描补齐</button>
+        <div class="brand-text">
+          <h1>vg2resin <span class="chip">v1.3.0</span></h1>
+          <div class="subtitle">VPNGate Multi-Tunnel to Resin SOCKS5 Gateway</div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div class="pool-stepper">
+          <span class="stepper-label">目标槽位:</span>
+          <input type="number" id="inputPoolSize" class="stepper-input" min="1" max="60" value="8">
+          <button onclick="setPoolSize(document.getElementById('inputPoolSize').value)" class="btn btn-primary" style="padding:4px 10px; font-size:12px;">应用</button>
+          <div style="display:flex; gap:4px; margin-left:4px;">
+            <button class="preset-pill" onclick="setPoolSize(5)">5</button>
+            <button class="preset-pill" onclick="setPoolSize(10)">10</button>
+            <button class="preset-pill" onclick="setPoolSize(20)">20</button>
+            <button class="preset-pill" onclick="setPoolSize(30)">30</button>
+          </div>
+        </div>
+
+        <button onclick="triggerRefresh()" class="btn btn-primary" id="btnRefresh">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          扫描补齐
+        </button>
       </div>
     </header>
 
-    <div class="stats-bar">
-      <div class="card">
-        <div class="stat-title"><span>活跃出口节点 / 目标槽位</span><span id="residentialSummary" style="color:#3fb950">0 家宽</span></div>
-        <div class="stat-val"><span id="activeCount" style="color:var(--success)">0</span> / <span id="poolSize">-</span></div>
-        <div class="stat-sub">独立公网 IP: <strong id="ipCount" style="color:#fff">0</strong> | 平均延迟: <strong id="avgLatency" style="color:#58a6ff">-</strong></div>
+    <!-- Bento Grid -->
+    <div class="bento-grid">
+      <!-- Card 1 -->
+      <div class="bento-card">
+        <div class="card-top">
+          <span class="card-label">
+            <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24M14.83 9.17l4.24-4.24M14.83 14.83l4.24 4.24M9.17 14.83l-4.24 4.24"/></svg>
+            活跃节点 / 槽位
+          </span>
+          <span class="card-tag" id="residentialSummary">0 家宽</span>
+        </div>
+        <div class="card-num">
+          <span id="activeCount" style="color:var(--success)">0</span>
+          <span class="unit">/ <span id="poolSize">-</span></span>
+        </div>
+        <div class="card-meta">
+          <span>独立出口 IP: <strong id="ipCount" style="color:#fff">0</strong></span>
+          <span>平均延迟: <strong id="avgLatency" style="color:#93c5fd">-</strong></span>
+        </div>
       </div>
 
-      <div class="card">
-        <div class="stat-title"><span>本应用内存消耗 (RSS)</span><span id="appProcCount">0 进程</span></div>
-        <div class="stat-val" style="color:#58a6ff"><span id="appMemMb">0.0</span> MB</div>
-        <div class="stat-sub">Python 主控 + OpenVPN + Microsocks</div>
+      <!-- Card 2 -->
+      <div class="bento-card">
+        <div class="card-top">
+          <span class="card-label">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M6 19v-3M10 19v-7M14 19v-4M18 19v-8M2 19h20"/></svg>
+            应用内存 (RSS)
+          </span>
+          <span class="card-tag" id="appProcCount">0 进程</span>
+        </div>
+        <div class="card-num">
+          <span id="appMemMb" style="color:#60a5fa">0.0</span>
+          <span class="unit">MB</span>
+        </div>
+        <div class="card-meta">
+          <span>Core + OpenVPN + MicroSocks</span>
+        </div>
       </div>
 
-      <div class="card">
-        <div class="stat-title"><span>本应用 CPU 消耗</span><span>系统总 CPU: <span id="sysCpuPct">0.0</span>%</span></div>
-        <div class="stat-val" style="color:#3fb950"><span id="appCpuPct">0.0</span>%</div>
-        <div class="progress-bar"><div class="progress-fill" id="cpuBar" style="width:0%; background:#3fb950;"></div></div>
-        <div class="stat-sub">系统负载 (1m/5m): <span id="loadAvg">-</span></div>
+      <!-- Card 3 -->
+      <div class="bento-card">
+        <div class="card-top">
+          <span class="card-label">
+            <svg class="icon" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 9h6v6H9zM9 1v2M15 1v2M9 21v2M15 21v2M1 9h2M1 15h2M21 9h2M21 15h2"/></svg>
+            应用 CPU 负载
+          </span>
+          <span class="card-tag">系统: <span id="sysCpuPct">0.0</span>%</span>
+        </div>
+        <div class="card-num">
+          <span id="appCpuPct" style="color:#34d399">0.0</span>
+          <span class="unit">%</span>
+        </div>
+        <div class="meter-track">
+          <div class="meter-fill" id="cpuBar" style="width:0%; background:#10b981;"></div>
+        </div>
+        <div class="card-meta">
+          <span>LoadAvg (1m/5m):</span>
+          <span id="loadAvg" style="color:#fff">-</span>
+        </div>
       </div>
 
-      <div class="card">
-        <div class="stat-title"><span>宿主机系统内存</span><span id="sysMemPct">0%</span></div>
-        <div class="stat-val"><span id="sysMemUsed">0</span> / <span id="sysMemTotal">0</span> MB</div>
-        <div class="progress-bar"><div class="progress-fill" id="memBar" style="width:0%;"></div></div>
-        <div class="stat-sub">订阅默认 Host: <span id="publicHost" style="color:#fff">-</span></div>
+      <!-- Card 4 -->
+      <div class="bento-card">
+        <div class="card-top">
+          <span class="card-label">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242M12 12v9M8 17l4 4 4-4"/></svg>
+            宿主机物理内存
+          </span>
+          <span class="card-tag" id="sysMemPct">0%</span>
+        </div>
+        <div class="card-num">
+          <span id="sysMemUsed">0</span>
+          <span class="unit">/ <span id="sysMemTotal">0</span> MB</span>
+        </div>
+        <div class="meter-track">
+          <div class="meter-fill" id="memBar" style="width:0%;"></div>
+        </div>
+        <div class="card-meta">
+          <span>主机公网 IP:</span>
+          <span id="publicHost" style="color:#fff; font-family:var(--font-mono);">-</span>
+        </div>
       </div>
     </div>
 
-    <div class="actions-bar">
-      <div class="sub-box">
-        <span>Resin 远程订阅 URL:</span>
-        <span id="subUrl" style="color:#fff; font-weight:600;">-</span>
-        <button onclick="copySubUrl()" style="padding:2px 8px; margin-left:6px;">📋 复制链接</button>
+    <!-- Subscription Ribbon -->
+    <div class="sub-ribbon">
+      <div class="sub-endpoint">
+        <span class="sub-label">Resin 远程订阅</span>
+        <div class="sub-address-bar" id="subUrl">-</div>
+        <button class="btn btn-primary" onclick="copySubUrl()" style="padding:5px 12px; font-size:12px;">
+          <svg class="icon" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+          复制
+        </button>
       </div>
+
       <div style="display:flex; gap:8px;">
-        <button onclick="window.open('/sub', '_blank')">📄 查看明文订阅</button>
-        <button onclick="fetchStatus()">🔄 立即刷新</button>
+        <a href="/sub" target="_blank" class="btn" style="font-size:12px; padding:5px 12px;">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+          明文订阅
+        </a>
+        <button onclick="fetchStatus()" class="btn" style="font-size:12px; padding:5px 12px;">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          刷新
+        </button>
       </div>
     </div>
 
-    <div class="card" style="padding:0; overflow:hidden;">
+    <!-- Table -->
+    <div class="table-container">
+      <div class="table-header-bar">
+        <div class="table-title">
+          <svg class="icon" style="color:var(--accent);" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          出口节点路由表
+        </div>
+        <span style="font-size:12px; color:var(--text-muted);">自动路由分流 · 独立隔离网卡</span>
+      </div>
+
       <table>
         <thead>
           <tr>
             <th>槽位</th>
             <th>状态</th>
             <th>SOCKS5 端口</th>
-            <th>国家</th>
-            <th>出口 IP 类型</th>
-            <th>实测出口公网 IP</th>
+            <th>地区</th>
+            <th>IP 属性 / 运营商</th>
+            <th>真实出口公网 IP</th>
             <th>端到端延迟</th>
             <th>VPN 节点 IP</th>
-            <th>实例内存</th>
+            <th>内存</th>
             <th>在线时长</th>
-            <th>操作</th>
+            <th style="text-align:right;">操作</th>
           </tr>
         </thead>
         <tbody id="workerTable">
-          <tr><td colspan="11" style="text-align:center; padding:24px; color:var(--text-muted)">正在加载节点信息...</td></tr>
+          <tr><td colspan="11" style="text-align:center; padding:36px; color:var(--text-muted)">正在加载节点信息...</td></tr>
         </tbody>
       </table>
     </div>
 
-    <div class="card logs-card">
-      <div class="logs-header">
-        <span style="font-weight:600; font-size:14px;">📜 实时运行与采集日志</span>
-        <button onclick="fetchLogs()" style="padding:2px 8px;">刷新日志</button>
+    <!-- Terminal Logs -->
+    <div class="terminal-card">
+      <div class="terminal-bar">
+        <div class="terminal-dots">
+          <span class="t-dot" style="background:#ef4444;"></span>
+          <span class="t-dot" style="background:#f59e0b;"></span>
+          <span class="t-dot" style="background:#10b981;"></span>
+          <span style="font-size:12px; font-weight:600; color:var(--text-muted); margin-left:6px;">守护进程实时日志</span>
+        </div>
+        <button onclick="fetchLogs()" class="btn" style="padding:2px 8px; font-size:11px;">刷新日志</button>
       </div>
-      <div class="logs-content" id="logContent">正在获取日志...</div>
+      <div class="terminal-body" id="logContent">正在获取实时日志流...</div>
     </div>
   </div>
 
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast">
+    <svg class="icon" style="color:var(--success);" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+    <span id="toastMsg">通知</span>
+  </div>
 
   <script>
     function showToast(msg) {
       const t = document.getElementById('toast');
-      t.innerText = msg;
-      t.style.display = 'block';
-      setTimeout(() => { t.style.display = 'none'; }, 2600);
+      document.getElementById('toastMsg').innerText = msg;
+      t.classList.add('active');
+      setTimeout(() => { t.classList.remove('active'); }, 2600);
     }
 
     function copySubUrl() {
       const url = document.getElementById('subUrl').innerText;
       navigator.clipboard.writeText(url).then(() => {
-        showToast('已复制订阅地址: ' + url);
+        showToast('已复制订阅地址到剪贴板');
       });
     }
 
@@ -333,9 +817,9 @@
       if (!sec || sec < 0) return '-';
       const m = Math.floor(sec / 60);
       const s = sec % 60;
-      if (m < 60) return `${m}分${s}秒`;
+      if (m < 60) return `${m}m ${s}s`;
       const h = Math.floor(m / 60);
-      return `${h}时${m % 60}分`;
+      return `${h}h ${m % 60}m`;
     }
 
     async function setPoolSize(val) {
@@ -402,46 +886,51 @@
 
         const tbody = document.getElementById('workerTable');
         if (workers.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:24px; color:var(--text-muted)">当前暂无活跃隧道，后台正在并发连接 VPNGate 节点...</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:36px; color:var(--text-muted)">当前暂无活跃隧道，后台正在并发连接 VPNGate 节点...</td></tr>';
           return;
         }
 
         let html = '';
         workers.forEach(w => {
           const isAlive = w.alive;
-          let typeClass = 'type-hosting';
+          let typeClass = 'type-dc';
           let typeLabel = w.ip_type || '未知';
-          if (typeLabel.includes('家宽')) typeClass = 'type-residential';
-          else if (typeLabel.includes('移动')) typeClass = 'type-mobile';
+          if (typeLabel.includes('家宽')) typeClass = 'type-res';
+          else if (typeLabel.includes('移动')) typeClass = 'type-mob';
 
-          let latHtml = '<span style="color:var(--text-muted)">-</span>';
+          let latHtml = '<span style="color:var(--text-subtle)">-</span>';
           if (w.latency_ms !== null && w.latency_ms !== undefined) {
             let latClass = 'lat-fast';
             if (w.latency_ms > 300) latClass = 'lat-slow';
             else if (w.latency_ms >= 150) latClass = 'lat-medium';
-            latHtml = `<span class="latency-badge ${latClass}">${w.latency_ms} ms</span>`;
+            latHtml = `<span class="latency-pill ${latClass}">${w.latency_ms} ms</span>`;
           }
 
           html += `
             <tr>
-              <td><strong>#${w.slot}</strong></td>
+              <td><span class="slot-id">#${w.slot}</span></td>
               <td>
-                <span class="status-dot ${isAlive ? 'dot-online' : 'dot-offline'}"></span>
-                ${isAlive ? '<span style="color:var(--success)">在线</span>' : '<span style="color:var(--danger)">异常</span>'}
+                <span class="status-indicator">
+                  <span class="status-pulse ${isAlive ? 'pulse-online' : 'pulse-offline'}"></span>
+                  <span style="color:${isAlive ? 'var(--text-main)' : 'var(--danger)'}">${isAlive ? 'Online' : 'Offline'}</span>
+                </span>
               </td>
-              <td><span class="ip-code">:${w.port}</span></td>
-              <td><span class="flag">${w.country || 'VG'}</span></td>
+              <td><span class="port-badge">:${w.port}</span></td>
+              <td><span class="flag-badge">${w.country || 'VG'}</span></td>
               <td>
-                <span class="type-badge ${typeClass}">${typeLabel}</span>
-                ${w.isp ? `<div class="isp-text" title="${w.isp}">${w.isp.substring(0, 24)}</div>` : ''}
+                <span class="ip-type-badge ${typeClass}">${typeLabel}</span>
+                ${w.isp ? `<div class="isp-caption" title="${w.isp}">${w.isp}</div>` : ''}
               </td>
-              <td><span class="ip-code" style="color:${isAlive ? '#58a6ff' : 'var(--text-muted)'}">${w.egress_ip || '-'}</span></td>
+              <td><span class="mono-cell" style="color:${isAlive ? '#60a5fa' : 'var(--text-muted)'}; font-weight:500;">${w.egress_ip || '-'}</span></td>
               <td>${latHtml}</td>
-              <td><span class="ip-code">${w.vpn_server_ip || '-'}</span></td>
-              <td><span class="ip-code">${(w.rss_mb || 0).toFixed(1)} MB</span></td>
-              <td>${formatDuration(w.uptime_sec)}</td>
-              <td>
-                <button class="btn-danger" onclick="rotateSlot(${w.slot})">🔄 换线</button>
+              <td><span class="mono-cell" style="color:var(--text-muted);">${w.vpn_server_ip || '-'}</span></td>
+              <td><span class="mono-cell" style="color:var(--text-muted);">${(w.rss_mb || 0).toFixed(1)} MB</span></td>
+              <td style="color:var(--text-muted); font-size:12px;">${formatDuration(w.uptime_sec)}</td>
+              <td style="text-align:right;">
+                <button class="btn btn-danger-ghost" onclick="rotateSlot(${w.slot})">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                  换线
+                </button>
               </td>
             </tr>
           `;
@@ -454,7 +943,7 @@
 
     async function rotateSlot(slot) {
       try {
-        showToast(`正在重置槽位 #${slot} 并切换新节点...`);
+        showToast(`正在重置槽位 #${slot} 并挑选新节点...`);
         const res = await fetch(`/api/rotate?slot=${slot}`, { method: 'POST' });
         const d = await res.json();
         showToast(d.message || '已触发换线');
@@ -468,7 +957,7 @@
     async function triggerRefresh() {
       const btn = document.getElementById('btnRefresh');
       btn.disabled = true;
-      btn.innerText = '⏳ 正在后台扫描补齐...';
+      btn.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg> 扫描中...';
       try {
         const res = await fetch('/api/rescan', { method: 'POST' });
         const d = await res.json();
@@ -480,7 +969,7 @@
       } finally {
         setTimeout(() => {
           btn.disabled = false;
-          btn.innerText = '⚡ 扫描补齐';
+          btn.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> 扫描补齐';
         }, 3000);
       }
     }
