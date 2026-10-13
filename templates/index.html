@@ -656,7 +656,12 @@
           </div>
         </div>
 
-        <button onclick="triggerRefresh()" class="btn btn-primary" id="btnRefresh">
+        <button onclick="triggerOptimize()" class="btn btn-primary" id="btnOptimize">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+          测速优选替换
+        </button>
+
+        <button onclick="triggerRefresh()" class="btn" id="btnRefresh">
           <svg class="icon" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
           扫描补齐
         </button>
@@ -978,6 +983,26 @@
         fetchLogs();
       } catch (e) {
         showToast('换线请求失败: ' + e);
+      }
+    }
+
+    async function triggerOptimize() {
+      const btn = document.getElementById('btnOptimize');
+      btn.disabled = true;
+      btn.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg> 测速选优中...';
+      try {
+        const res = await fetch('/api/optimize', { method: 'POST' });
+        const d = await res.json();
+        showToast(d.message || '已启动全量测速优选');
+        fetchStatus();
+        fetchLogs();
+      } catch (e) {
+        showToast('优选请求失败: ' + e);
+      } finally {
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> 测速优选替换';
+        }, 3000);
       }
     }
 

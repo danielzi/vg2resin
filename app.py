@@ -154,15 +154,18 @@ def parse_iphone_csv(text):
         if b64 and ip:
             ovpn = base64.b64decode(b64).decode("utf-8", errors="ignore")
             if "proto tcp" in ovpn:
+                remotes = re.findall(r"^remote\s+([^\s]+)\s+([0-9]+)", ovpn, re.MULTILINE)
+                r_host, r_port = (remotes[0][0], int(remotes[0][1])) if remotes else (ip, 443)
                 nodes.append({
                     "ip": ip,
+                    "host": r_host,
+                    "port": r_port,
                     "country": row.get("CountryShort", "VG"),
                     "score": int(row.get("Score") or 0),
                     "ping": int(row.get("Ping") or 999),
                     "speed": int(row.get("Speed") or 0),
                     "ovpn": ovpn
                 })
-    nodes.sort(key=lambda x: (x["score"], x["speed"]), reverse=True)
     return nodes
 
 def fetch_from_api():
@@ -237,11 +240,45 @@ def fetch_from_html():
         logging.warning(f"Fetch HTML fallback failed: {e}")
     return []
 
-def get_candidate_nodes():
+from concurrent.futures import ThreadPoolExecutor
+
+def probe_node_tcp_latency(node):
+    t0 = time.time()
+    try:
+        host = node.get("host") or node.get("ip")
+        port = int(node.get("port") or 443)
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(1.2)
+        s.connect((host, port))
+        rtt = int((time.time() - t0) * 1000)
+        s.close()
+        node["tcp_rtt"] = rtt
+        return node
+    except Exception:
+        node["tcp_rtt"] = 99999
+        return node
+
+def get_candidate_nodes(prioritize_latency=True):
     nodes = fetch_from_api()
     if not nodes:
         logging.info("Falling back to HTML scraping from vpngate.net/en/...")
         nodes = fetch_from_html()
+    if not nodes:
+        return []
+
+    if prioritize_latency:
+        with ThreadPoolExecutor(max_workers=30) as pool:
+            results = list(pool.map(probe_node_tcp_latency, nodes))
+        # Keep reachable nodes sorted by real TCP handshake latency
+        reachable = [n for n in results if n.get("tcp_rtt", 99999) < 5000]
+        reachable.sort(key=lambda x: (x["tcp_rtt"], -x["speed"]))
+        unreachable = [n for n in results if n.get("tcp_rtt", 99999) >= 5000]
+        unreachable.sort(key=lambda x: (x["score"], x["speed"]), reverse=True)
+        nodes = reachable + unreachable
+        if reachable:
+            logging.info(f"VPNGate nodes ranked by TCP RTT: top node {nodes[0]['ip']} ({nodes[0]['country']}) RTT={nodes[0]['tcp_rtt']}ms (reachable: {len(reachable)}/{len(results)})")
+    else:
+        nodes.sort(key=lambda x: (x["score"], x["speed"]), reverse=True)
     return nodes
 
 def get_proc_rss_kb(pid):
@@ -499,7 +536,7 @@ def supervisor_loop():
 
             if dead_slots:
                 logging.info(f"Filling slots: {dead_slots} (Target: {POOL_SIZE})...")
-                candidates = get_candidate_nodes()
+                candidates = get_candidate_nodes(prioritize_latency=True)
                 with lock:
                     active_ips = {w["node"]["ip"] for w in workers.values()}
                 now = time.time()
@@ -517,6 +554,30 @@ def supervisor_loop():
                         attempts += 1
                         if start_worker(slot, node):
                             break
+            else:
+                # Slot auto-optimization: check if running slots have poor latency while top candidate nodes have much better latency
+                with lock:
+                    current_workers_list = [
+                        (idx, w.get("latency_ms", 9999))
+                        for idx, w in workers.items()
+                        if w.get("latency_ms") and w["latency_ms"] > 300
+                    ]
+                if current_workers_list:
+                    current_workers_list.sort(key=lambda x: x[1], reverse=True)
+                    worst_slot, worst_lat = current_workers_list[0]
+                    candidates = get_candidate_nodes(prioritize_latency=True)
+                    with lock:
+                        active_ips = {w["node"]["ip"] for w in workers.values()}
+                    now = time.time()
+                    available = [
+                        n for n in candidates
+                        if n["ip"] not in active_ips and (n["ip"] not in failed_ips or now - failed_ips[n["ip"]] > 600)
+                    ]
+                    if available and available[0].get("tcp_rtt", 9999) < (worst_lat * 0.5):
+                        better_node = available[0]
+                        logging.info(f"Auto-optimizing slot #{worst_slot}: current latency {worst_lat}ms -> replacing with lower-RTT node {better_node['ip']} (RTT ~{better_node.get('tcp_rtt')}ms)")
+                        clean_worker(worst_slot)
+                        start_worker(worst_slot, better_node)
         except Exception as e:
             logging.error(f"Supervisor loop error: {e}")
         scan_event.wait(timeout=REFRESH_INTERVAL)
@@ -581,6 +642,37 @@ class ResinSubHandler(BaseHTTPRequestHandler):
                 self.send_json({"ok": True, "message": f"槽位 #{slot} 已触发重新换线"})
             else:
                 self.send_json({"ok": False, "message": "无效的槽位编号"}, 400)
+        elif parsed.path == "/api/optimize":
+            logging.info("Optimal latency scan & slot upgrade requested via WebUI")
+            def _optimize():
+                candidates = get_candidate_nodes(prioritize_latency=True)
+                if not candidates:
+                    return
+                with lock:
+                    active_ips = {w["node"]["ip"] for w in workers.values()}
+                    sorted_workers = sorted(
+                        workers.items(),
+                        key=lambda item: item[1].get("latency_ms") or 9999,
+                        reverse=True
+                    )
+                now = time.time()
+                available = [
+                    n for n in candidates
+                    if n["ip"] not in active_ips and (n["ip"] not in failed_ips or now - failed_ips[n["ip"]] > 600)
+                ]
+                avail_idx = 0
+                for slot, w in sorted_workers:
+                    current_lat = w.get("latency_ms") or 9999
+                    if avail_idx < len(available):
+                        best_candidate = available[avail_idx]
+                        cand_rtt = best_candidate.get("tcp_rtt", 9999)
+                        if cand_rtt < current_lat * 0.7 or current_lat > 500:
+                            logging.info(f"Replacing slot #{slot} (latency {current_lat}ms) with top candidate {best_candidate['ip']} (RTT {cand_rtt}ms)")
+                            clean_worker(slot)
+                            if start_worker(slot, best_candidate):
+                                avail_idx += 1
+            threading.Thread(target=_optimize, daemon=True).start()
+            self.send_json({"ok": True, "message": "已启动全量测速择优，正在按最优延迟顺序优化并替换慢节点"})
         elif parsed.path == "/api/rescan":
             logging.info("Manual rescan requested via WebUI")
             scan_event.set()
