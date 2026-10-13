@@ -292,17 +292,25 @@ def check_socks5_handshake(port, timeout=2):
     except Exception:
         return False
 
-def probe_socks5_egress(port, timeout=6):
+def probe_socks5_egress_and_latency(port, timeout=6):
     try:
         out = subprocess.check_output(
-            ["curl", "-s", "--max-time", str(timeout), "--socks5-hostname", f"127.0.0.1:{port}", "http://checkip.amazonaws.com"],
+            ["curl", "-s", "--max-time", str(timeout), "--socks5-hostname", f"127.0.0.1:{port}",
+             "-w", "\n%{time_total}", "http://checkip.amazonaws.com"],
             stderr=subprocess.DEVNULL
         ).decode().strip()
-        if re.match(r"^\d+\.\d+\.\d+\.\d+$", out):
-            return out
+        lines = out.splitlines()
+        if len(lines) >= 2:
+            ip = lines[0].strip()
+            total_sec = float(lines[-1].strip())
+            latency_ms = round(total_sec * 1000)
+            if re.match(r"^\d+\.\d+\.\d+\.\d+$", ip):
+                return ip, latency_ms
+        elif len(lines) == 1 and re.match(r"^\d+\.\d+\.\d+\.\d+$", lines[0].strip()):
+            return lines[0].strip(), None
     except Exception:
         pass
-    return None
+    return None, None
 
 def start_worker(idx, node):
     clean_worker(idx)
@@ -356,10 +364,11 @@ def start_worker(idx, node):
             break
 
     if ready:
-        egress_ip = probe_socks5_egress(port, timeout=6)
+        egress_ip, latency_ms = probe_socks5_egress_and_latency(port, timeout=6)
         if egress_ip:
             lookup_ip_info_async(egress_ip)
-            logging.info(f"[Worker-{idx}] ONLINE -> SOCKS5 :{port} | Node: {node['country']}-{node['ip']} | Egress: {egress_ip}")
+            lat_str = f"{latency_ms}ms" if latency_ms else "N/A"
+            logging.info(f"[Worker-{idx}] ONLINE -> SOCKS5 :{port} | Node: {node['country']}-{node['ip']} | Egress: {egress_ip} | Latency: {lat_str}")
             with lock:
                 workers[idx] = {
                     "proc": proc,
@@ -368,6 +377,7 @@ def start_worker(idx, node):
                     "port": port,
                     "dev": dev,
                     "egress_ip": egress_ip,
+                    "latency_ms": latency_ms,
                     "ready_time": time.time()
                 }
             return True
@@ -466,7 +476,6 @@ def supervisor_loop():
     logging.info("Starting background supervisor...")
     while True:
         try:
-            # 清理超出当前目标插槽数的旧槽位
             with lock:
                 extra_slots = [idx for idx in workers.keys() if idx > POOL_SIZE]
             for extra in extra_slots:
@@ -480,8 +489,13 @@ def supervisor_loop():
                 if not w or w["proc"].poll() is not None or not check_socks5_handshake(BASE_PORT + i):
                     dead_slots.append(i)
                 else:
-                    if not probe_socks5_egress(BASE_PORT + i, timeout=6):
+                    egress_ip, latency_ms = probe_socks5_egress_and_latency(BASE_PORT + i, timeout=6)
+                    if not egress_ip:
                         dead_slots.append(i)
+                    else:
+                        with lock:
+                            if i in workers:
+                                workers[i]["latency_ms"] = latency_ms
 
             if dead_slots:
                 logging.info(f"Filling slots: {dead_slots} (Target: {POOL_SIZE})...")
@@ -625,6 +639,7 @@ class ResinSubHandler(BaseHTTPRequestHandler):
                         "country": w["node"]["country"],
                         "vpn_server_ip": w["node"]["ip"],
                         "egress_ip": egress,
+                        "latency_ms": w.get("latency_ms"),
                         "ip_type": ip_info.get("type", "查询中..."),
                         "isp": ip_info.get("isp", ""),
                         "uptime_sec": int(time.time() - w["ready_time"]),
