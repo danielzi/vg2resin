@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import re
+import shutil
 import socket
 import ssl
 import subprocess
@@ -22,15 +23,17 @@ BASE_PORT = int(os.environ.get("BASE_PORT", 10800))
 HTTP_PORT = int(os.environ.get("HTTP_PORT", 8080))
 REFRESH_INTERVAL = int(os.environ.get("REFRESH_INTERVAL", 120))
 RUNTIME_DIR = os.environ.get("RUNTIME_DIR", "/var/run/vg2resin")
-UP_HOOK = os.environ.get("UP_HOOK", "/root/workspace/vg2resin/up_hook.sh")
-if not os.path.exists(UP_HOOK) and os.path.exists("/app/up_hook.sh"):
-    UP_HOOK = "/app/up_hook.sh"
+UP_HOOK = os.environ.get("UP_HOOK", "/app/up_hook.sh")
+if not os.path.exists(UP_HOOK) and os.path.exists("/root/workspace/vg2resin/up_hook.sh"):
+    UP_HOOK = "/root/workspace/vg2resin/up_hook.sh"
+
+OPENVPN_BIN = shutil.which("openvpn") or "/usr/sbin/openvpn"
 
 os.makedirs(RUNTIME_DIR, exist_ok=True)
 
 lock = threading.Lock()
 workers = {}
-failed_ips = {}  # ip -> timestamp
+failed_ips = {}
 
 def get_public_ip():
     env_ip = os.environ.get("SERVER_IP", "").strip()
@@ -84,7 +87,6 @@ def parse_iphone_csv(text):
 
 def fetch_from_api():
     url = "http://www.vpngate.net/api/iphone/"
-    # 1. Try via an already-connected local SOCKS5 worker to bypass datacenter IP filter
     with lock:
         active_ports = [w["port"] for w in workers.values()]
     for port in active_ports:
@@ -100,7 +102,6 @@ def fetch_from_api():
         except Exception:
             continue
 
-    # 2. Try direct request
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
         with urllib.request.urlopen(req, timeout=10) as resp:
@@ -164,6 +165,7 @@ def get_candidate_nodes():
     return nodes
 
 def clean_worker(idx):
+    dev = f"tun_vg_{idx}"
     with lock:
         if idx in workers:
             w = workers.pop(idx)
@@ -175,17 +177,18 @@ def clean_worker(idx):
                     w["proc"].kill()
                 except Exception:
                     pass
-    pkill_cmd = f"pkill -f 'microsocks -i 0.0.0.0 -p {BASE_PORT + idx} ' 2>/dev/null || true"
-    subprocess.run(pkill_cmd, shell=True)
+    subprocess.run(f"pkill -9 -f 'tun_vg_{idx}' 2>/dev/null || true", shell=True)
+    subprocess.run(f"pkill -9 -f 'microsocks -i 0.0.0.0 -p {BASE_PORT + idx} ' 2>/dev/null || true", shell=True)
     subprocess.run(f"ip rule del priority {1000 + idx} 2>/dev/null || true", shell=True)
     subprocess.run(f"ip route flush table {100 + idx} 2>/dev/null || true", shell=True)
-    subprocess.run(f"ip tuntap del mode tun dev tun{idx} 2>/dev/null || true", shell=True)
+    subprocess.run(f"ip link del {dev} 2>/dev/null || true", shell=True)
     status_file = os.path.join(RUNTIME_DIR, f"worker_{idx}.json")
     if os.path.exists(status_file):
         try:
             os.remove(status_file)
         except Exception:
             pass
+    time.sleep(0.3)
 
 def check_socks5_handshake(port, timeout=2):
     try:
@@ -214,7 +217,7 @@ def probe_socks5_egress(port, timeout=6):
 def start_worker(idx, node):
     clean_worker(idx)
     port = BASE_PORT + idx
-    dev = f"tun{idx}"
+    dev = f"tun_vg_{idx}"
     ovpn_file = os.path.join(RUNTIME_DIR, f"client_{idx}.ovpn")
     log_file = os.path.join(RUNTIME_DIR, f"ovpn_{idx}.log")
 
@@ -226,9 +229,7 @@ def start_worker(idx, node):
         "script-security 2\n"
         f"up \"{UP_HOOK}\"\n"
         "connect-retry-max 1\n"
-        "connect-timeout 6\n"
-        "ping 5\n"
-        "ping-restart 20\n"
+        "connect-timeout 8\n"
     )
     with open(ovpn_file, "w") as f:
         f.write(patched_ovpn)
@@ -239,15 +240,16 @@ def start_worker(idx, node):
     env["RUNTIME_DIR"] = RUNTIME_DIR
 
     cmd = [
-        "/usr/sbin/openvpn",
+        OPENVPN_BIN,
         "--config", ovpn_file,
+        "--dev-type", "tun",
         "--dev", dev,
         "--log", log_file
     ]
     proc = subprocess.Popen(cmd, env=env)
 
     ready = False
-    for _ in range(10):
+    for _ in range(15):
         time.sleep(1)
         status_file = os.path.join(RUNTIME_DIR, f"worker_{idx}.json")
         if os.path.exists(status_file) and check_socks5_handshake(port):
@@ -287,7 +289,6 @@ def supervisor_loop():
                 if not w or w["proc"].poll() is not None or not check_socks5_handshake(BASE_PORT + i):
                     dead_slots.append(i)
                 else:
-                    # Periodically verify egress traffic works
                     if not probe_socks5_egress(BASE_PORT + i, timeout=6):
                         dead_slots.append(i)
 

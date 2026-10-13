@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-export PATH="/usr/sbin:/sbin:/usr/bin:/bin:$PATH"
+export PATH="/usr/local/bin:/usr/sbin:/sbin:/usr/bin:/bin:$PATH"
 
 IDX="${WORKER_IDX:?}"
 SOCKS_PORT="${WORKER_PORT:?}"
@@ -22,7 +22,7 @@ fi
 while ip rule del priority "$PRIO" 2>/dev/null; do :; done
 ip rule add from "${ifconfig_local}/32" table "$TABLE_ID" priority "$PRIO"
 
-pkill -f "microsocks -i 0.0.0.0 -p ${SOCKS_PORT} " 2>/dev/null || true
+pkill -9 -f "microsocks -i 0.0.0.0 -p ${SOCKS_PORT} " 2>/dev/null || true
 nohup microsocks -i 0.0.0.0 -p "$SOCKS_PORT" -b "$ifconfig_local" >"${RUNTIME_DIR}/ms_${IDX}.log" 2>&1 &
 MS_PID=$!
 
