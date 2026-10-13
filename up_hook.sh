@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
 export PATH="/usr/local/bin:/usr/sbin:/sbin:/usr/bin:/bin:$PATH"
 
-IDX="${WORKER_IDX:?}"
-SOCKS_PORT="${WORKER_PORT:?}"
+DEV_NAME="${dev:-$1}"
+IDX="${WORKER_IDX:-}"
+if [ -z "$IDX" ]; then
+    IDX=$(echo "$DEV_NAME" | sed 's/[^0-9]*//g')
+fi
+if [ -z "$IDX" ]; then
+    IDX=1
+fi
+
+SOCKS_PORT="${WORKER_PORT:-$((10800 + IDX))}"
 RUNTIME_DIR="${RUNTIME_DIR:-/var/run/vg2resin}"
 
 TABLE_ID=$((100 + IDX))
