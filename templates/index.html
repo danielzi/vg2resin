@@ -677,7 +677,7 @@
             <svg class="icon" style="color:var(--accent);" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24M14.83 9.17l4.24-4.24M14.83 14.83l4.24 4.24M9.17 14.83l-4.24 4.24"/></svg>
             活跃节点 / 槽位
           </span>
-          <span class="card-tag" id="residentialSummary">0 家宽</span>
+          <span class="card-tag" id="residentialSummary">-</span>
         </div>
         <div class="card-num">
           <span id="activeCount" style="color:var(--accent)">0</span>
@@ -905,8 +905,9 @@
         const uniqueIps = new Set(active.map(w => w.egress_ip).filter(Boolean));
         document.getElementById('ipCount').innerText = uniqueIps.size;
 
-        const resCount = active.filter(w => w.ip_type && w.ip_type.includes('家宽')).length;
-        document.getElementById('residentialSummary').innerText = `${resCount} 家宽 / ${active.length - resCount} 机房`;
+        const resCount = active.filter(w => w.ip_type && (w.ip_type.includes('宽带') || w.ip_type.includes('家宽'))).length;
+        const dcCount = active.filter(w => w.ip_type && (w.ip_type.includes('机房') || w.ip_type.includes('数据中心'))).length;
+        document.getElementById('residentialSummary').innerText = `${resCount} 家宽/商宽 · ${dcCount} 机房`;
 
         const latencies = active.map(w => w.latency_ms).filter(v => typeof v === 'number');
         if (latencies.length > 0) {
@@ -927,7 +928,7 @@
           const isAlive = w.alive;
           let typeClass = 'type-dc';
           let typeLabel = w.ip_type || '未知';
-          if (typeLabel.includes('家宽')) typeClass = 'type-res';
+          if (typeLabel.includes('宽带') || typeLabel.includes('家宽')) typeClass = 'type-res';
           else if (typeLabel.includes('移动')) typeClass = 'type-mob';
 
           let latHtml = '<span style="color:var(--text-subtle)">-</span>';
