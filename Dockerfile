@@ -25,5 +25,5 @@ COPY app.py /app/app.py
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/up_hook.sh /app/entrypoint.sh /usr/bin/microsocks
 
-EXPOSE 8080 10801-10820
+EXPOSE 28080 10801-10820
 ENTRYPOINT ["/app/entrypoint.sh"]

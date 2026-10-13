@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 
 POOL_SIZE = int(os.environ.get("POOL_SIZE", 8))
 BASE_PORT = int(os.environ.get("BASE_PORT", 10800))
-HTTP_PORT = int(os.environ.get("HTTP_PORT", 8080))
+HTTP_PORT = int(os.environ.get("HTTP_PORT", 28080))
 REFRESH_INTERVAL = int(os.environ.get("REFRESH_INTERVAL", 120))
 RUNTIME_DIR = os.environ.get("RUNTIME_DIR", "/var/run/vg2resin")
 UP_HOOK = os.environ.get("UP_HOOK", "/app/up_hook.sh")

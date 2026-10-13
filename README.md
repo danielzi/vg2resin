@@ -41,7 +41,7 @@ docker compose up -d --build
 | :--- | :--- | :--- |
 | `POOL_SIZE` | `10` | 并发维持的 VPNGate 出口隧道数量 |
 | `BASE_PORT` | `10800` | SOCKS5 起始端口（实际分配 `BASE_PORT+1` ~ `BASE_PORT+POOL_SIZE`） |
-| `HTTP_PORT` | `8080` | 订阅与状态 HTTP 服务监听端口 |
+| `HTTP_PORT` | `28080` | 订阅与状态 HTTP 服务监听端口 |
 | `REFRESH_INTERVAL` | `120` | 节点池健康巡检与坏节点轮换周期（秒） |
 | `SERVER_IP` | 自动探测 | 订阅输出的默认主机 IP（也可在请求 `/sub?host=x.x.x.x` 时动态指定） |
 
@@ -49,8 +49,8 @@ docker compose up -d --build
 
 在 Resin WebUI 的 **「订阅管理」 -> 「添加订阅」** 中填入远程订阅地址：
 
-- 同机部署：`http://127.0.0.1:8080/sub`
-- 跨机部署：`http://<vg2resin服务器IP>:8080/sub`
+- 同机部署：`http://127.0.0.1:28080/sub`
+- 跨机部署：`http://<vg2resin服务器IP>:28080/sub`
 
 接口汇总：
 - `GET /sub`：返回明文 `socks5://` 节点列表
